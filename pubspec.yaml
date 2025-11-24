@@ -1,7 +1,7 @@
-name: flutter_application_1
-description: "A new Flutter project."
+name: pomodoro_app
+description: "A Pomodoro Timer app for productivity and focus management."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0
 
 environment:
   sdk: ^3.10.1

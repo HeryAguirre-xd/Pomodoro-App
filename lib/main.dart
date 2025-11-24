@@ -277,6 +277,7 @@ class _PomodoroTimerState extends State<PomodoroTimer>
                 _getMotivationalText(),
                 style: TextStyle(
                   fontSize: 16,
+                  // ignore: deprecated_member_use
                   color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
                   fontStyle: FontStyle.italic,
                 ),
@@ -291,7 +292,10 @@ class _PomodoroTimerState extends State<PomodoroTimer>
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                  // ignore: deprecated_member_use
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(
+                    0.3,
+                  ),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -335,6 +339,7 @@ class _PomodoroTimerState extends State<PomodoroTimer>
                         color: modeColor,
                         boxShadow: [
                           BoxShadow(
+                            // ignore: deprecated_member_use
                             color: modeColor.withOpacity(0.4),
                             blurRadius: 20,
                             spreadRadius: 2,
@@ -441,6 +446,7 @@ class _CircularProgressPainter extends CustomPainter {
 
     // Background circle
     final bgPaint = Paint()
+      // ignore: deprecated_member_use
       ..color = color.withOpacity(0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 15;
@@ -464,6 +470,7 @@ class _CircularProgressPainter extends CustomPainter {
     // Pulse effect when running
     if (isRunning) {
       final pulsePaint = Paint()
+        // ignore: deprecated_member_use
         ..color = color.withOpacity(0.3 * (1 - pulseValue))
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2;
