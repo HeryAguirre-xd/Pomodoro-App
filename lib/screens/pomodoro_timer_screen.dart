@@ -18,13 +18,17 @@ class _PomodoroTimerState extends State<PomodoroTimer>
   int workDuration = 25;
   int shortBreakDuration = 5;
   int longBreakDuration = 15;
+  bool autoStartBreaks = false;
+  bool autoStartWork = false;
 
   Timer? _timer;
+  Timer? _autoStartTimer;
   int _secondsRemaining = 25 * 60;
   int _totalSeconds = 25 * 60;
   bool _isRunning = false;
   TimerMode _currentMode = TimerMode.work;
   int _completedSessions = 0;
+  int _autoStartCountdown = 0;
 
   late AnimationController _pulseController;
 
@@ -70,17 +74,50 @@ class _PomodoroTimerState extends State<PomodoroTimer>
     _timer?.cancel();
     setState(() => _isRunning = false);
 
+    TimerMode nextMode;
+    bool shouldAutoStart = false;
+
     if (_currentMode == TimerMode.work) {
       _completedSessions++;
       // After 4 work sessions, take a long break
       if (_completedSessions % 4 == 0) {
-        _switchMode(TimerMode.longBreak);
+        nextMode = TimerMode.longBreak;
       } else {
-        _switchMode(TimerMode.shortBreak);
+        nextMode = TimerMode.shortBreak;
       }
+      shouldAutoStart = autoStartBreaks;
     } else {
-      _switchMode(TimerMode.work);
+      nextMode = TimerMode.work;
+      shouldAutoStart = autoStartWork;
     }
+
+    _switchMode(nextMode);
+
+    if (shouldAutoStart) {
+      _startAutoStartCountdown();
+    }
+  }
+
+  void _startAutoStartCountdown() {
+    _autoStartTimer?.cancel();
+    setState(() => _autoStartCountdown = 3);
+
+    _autoStartTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (_autoStartCountdown > 1) {
+          _autoStartCountdown--;
+        } else {
+          _autoStartCountdown = 0;
+          timer.cancel();
+          _startTimer();
+        }
+      });
+    });
+  }
+
+  void _cancelAutoStart() {
+    _autoStartTimer?.cancel();
+    setState(() => _autoStartCountdown = 0);
   }
 
   void _switchMode(TimerMode newMode) {
@@ -102,6 +139,7 @@ class _PomodoroTimerState extends State<PomodoroTimer>
   }
 
   void _openSettings() {
+    _cancelAutoStart();
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -109,11 +147,15 @@ class _PomodoroTimerState extends State<PomodoroTimer>
           workDuration: workDuration,
           shortBreakDuration: shortBreakDuration,
           longBreakDuration: longBreakDuration,
-          onSave: (work, shortBreak, longBreak) {
+          autoStartBreaks: autoStartBreaks,
+          autoStartWork: autoStartWork,
+          onSave: (work, shortBreak, longBreak, autoBreaks, autoWork) {
             setState(() {
               workDuration = work;
               shortBreakDuration = shortBreak;
               longBreakDuration = longBreak;
+              autoStartBreaks = autoBreaks;
+              autoStartWork = autoWork;
 
               // Update current timer if not running
               if (!_isRunning) {
@@ -176,6 +218,7 @@ class _PomodoroTimerState extends State<PomodoroTimer>
   @override
   void dispose() {
     _timer?.cancel();
+    _autoStartTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -284,17 +327,49 @@ class _PomodoroTimerState extends State<PomodoroTimer>
               ),
               const Spacer(),
 
-              // Motivational text
-              Text(
-                _getMotivationalText(),
-                style: TextStyle(
-                  fontSize: 16,
-                  // ignore: deprecated_member_use
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
-                  fontStyle: FontStyle.italic,
+              // Auto-start countdown or Motivational text
+              if (_autoStartCountdown > 0)
+                GestureDetector(
+                  onTap: _cancelAutoStart,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      // ignore: deprecated_member_use
+                      color: modeColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: modeColor, width: 2),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.play_circle_outline, color: modeColor),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Starting in $_autoStartCountdown... (tap to cancel)',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: modeColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  _getMotivationalText(),
+                  style: TextStyle(
+                    fontSize: 16,
+                    // ignore: deprecated_member_use
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
               const SizedBox(height: 24),
 
               // Sessions completed indicator

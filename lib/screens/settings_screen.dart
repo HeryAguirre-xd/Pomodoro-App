@@ -4,13 +4,17 @@ class SettingsScreen extends StatefulWidget {
   final int workDuration;
   final int shortBreakDuration;
   final int longBreakDuration;
-  final Function(int, int, int) onSave;
+  final bool autoStartBreaks;
+  final bool autoStartWork;
+  final Function(int, int, int, bool, bool) onSave;
 
   const SettingsScreen({
     super.key,
     required this.workDuration,
     required this.shortBreakDuration,
     required this.longBreakDuration,
+    required this.autoStartBreaks,
+    required this.autoStartWork,
     required this.onSave,
   });
 
@@ -22,6 +26,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late int _workDuration;
   late int _shortBreakDuration;
   late int _longBreakDuration;
+  late bool _autoStartBreaks;
+  late bool _autoStartWork;
 
   @override
   void initState() {
@@ -29,6 +35,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _workDuration = widget.workDuration;
     _shortBreakDuration = widget.shortBreakDuration;
     _longBreakDuration = widget.longBreakDuration;
+    _autoStartBreaks = widget.autoStartBreaks;
+    _autoStartWork = widget.autoStartWork;
   }
 
   @override
@@ -46,6 +54,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _workDuration,
                 _shortBreakDuration,
                 _longBreakDuration,
+                _autoStartBreaks,
+                _autoStartWork,
               );
               Navigator.pop(context);
             },
@@ -85,6 +95,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Colors.blue.shade400,
             Icons.beach_access_outlined,
             (value) => setState(() => _longBreakDuration = value),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Auto-Start',
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            elevation: 2,
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('Auto-start Breaks'),
+                  subtitle: const Text(
+                    'Automatically start break after focus session',
+                  ),
+                  secondary: Icon(Icons.coffee, color: Colors.green.shade400),
+                  value: _autoStartBreaks,
+                  onChanged: (value) =>
+                      setState(() => _autoStartBreaks = value),
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Auto-start Focus'),
+                  subtitle: const Text('Automatically start focus after break'),
+                  secondary: Icon(Icons.work, color: Colors.red.shade400),
+                  value: _autoStartWork,
+                  onChanged: (value) => setState(() => _autoStartWork = value),
+                ),
+              ],
+            ),
           ),
         ],
       ),
