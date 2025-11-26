@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/timer_mode.dart';
+import '../models/session_history.dart';
 import '../widgets/mode_chip.dart';
 import '../widgets/circular_progress_painter.dart';
 import 'settings_screen.dart';
@@ -29,6 +30,8 @@ class _PomodoroTimerState extends State<PomodoroTimer>
   TimerMode _currentMode = TimerMode.work;
   int _completedSessions = 0;
   int _autoStartCountdown = 0;
+
+  final TextEditingController _taskController = TextEditingController();
 
   late AnimationController _pulseController;
 
@@ -79,6 +82,17 @@ class _PomodoroTimerState extends State<PomodoroTimer>
 
     if (_currentMode == TimerMode.work) {
       _completedSessions++;
+      // Save session to history
+      SessionHistory.add(
+        Session(
+          taskLabel: _taskController.text.isEmpty
+              ? 'Focus Session'
+              : _taskController.text,
+          completedAt: DateTime.now(),
+          durationMinutes: _totalSeconds ~/ 60,
+          mode: _currentMode,
+        ),
+      );
       // After 4 work sessions, take a long break
       if (_completedSessions % 4 == 0) {
         nextMode = TimerMode.longBreak;
@@ -215,10 +229,137 @@ class _PomodoroTimerState extends State<PomodoroTimer>
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
+  void _showHistory() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildHistorySheet(),
+    );
+  }
+
+  Widget _buildHistorySheet() {
+    final theme = Theme.of(context);
+    final sessions = SessionHistory.sessions;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.dividerColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                const Icon(Icons.history, size: 28),
+                const SizedBox(width: 12),
+                Text(
+                  'Session History',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${SessionHistory.totalFocusMinutes} min total',
+                  style: TextStyle(
+                    color: _getModeColor(),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(
+            child: sessions.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.hourglass_empty,
+                          size: 64,
+                          // ignore: deprecated_member_use
+                          color: theme.iconTheme.color?.withOpacity(0.3),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No sessions yet',
+                          style: TextStyle(
+                            fontSize: 18,
+                            // ignore: deprecated_member_use
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withOpacity(0.5),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Complete a focus session to see it here',
+                          style: TextStyle(
+                            fontSize: 14,
+                            // ignore: deprecated_member_use
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withOpacity(0.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemCount: sessions.length,
+                    itemBuilder: (context, index) {
+                      final session = sessions[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.red.shade400,
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text(
+                          session.taskLabel,
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                        subtitle: Text(
+                          '${session.formattedDate} at ${session.formattedTime}',
+                        ),
+                        trailing: Text(
+                          '${session.durationMinutes} min',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade400,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
     _autoStartTimer?.cancel();
+    _taskController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -237,6 +378,7 @@ class _PomodoroTimerState extends State<PomodoroTimer>
         elevation: 0,
         backgroundColor: Colors.transparent,
         actions: [
+          IconButton(icon: const Icon(Icons.history), onPressed: _showHistory),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             onPressed: _openSettings,
@@ -277,6 +419,30 @@ class _PomodoroTimerState extends State<PomodoroTimer>
                   ),
                 ],
               ),
+              const SizedBox(height: 24),
+
+              // Task input field
+              if (_currentMode == TimerMode.work)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: TextField(
+                    controller: _taskController,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: 'What are you working on?',
+                      border: InputBorder.none,
+                      hintStyle: TextStyle(
+                        // ignore: deprecated_member_use
+                        color: theme.hintColor.withOpacity(0.5),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: theme.textTheme.bodyLarge?.color,
+                    ),
+                  ),
+                ),
               const Spacer(),
 
               // Circular progress timer
